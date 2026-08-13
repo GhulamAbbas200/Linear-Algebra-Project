@@ -191,47 +191,46 @@ Predict **house price** (lakh PKR) from three features:
 
 `price = b0 + b1·Area + b2·Bedrooms + b3·Age`
 
-The least-squares best-fit coefficients solve the **normal equations**:
+There are **4 unknown coefficients** (`b0, b1, b2, b3`), so exactly **4 houses**
+with known prices are enough to pin them down uniquely — 4 equations, 4
+unknowns, one exact solution (no fitting/approximation needed). Each house
+gives one row of the system:
 
-`(XᵀX) b = Xᵀy`
+`b0(1) + b1·Area + b2·Bedrooms + b3·Age = Price`
 
-— a 4×4 system, solved below with the same exact-fraction LU engine and the
-same matrix-style step layout. Edit the dataset (whole numbers only, so the
-resulting system stays exact) to use your own data.
+Stacking all 4 rows gives a square matrix equation **X b = y** (X is 4×4),
+solved below with the exact-fraction LU engine and the same matrix-style
+step layout as Tab 1. Edit the 4 houses (whole numbers only, so the system
+stays exact) to use your own data.
         """
     )
 
     default_data = pd.DataFrame({
-        "Area": [10, 15, 12, 20, 8, 18],
-        "Bedrooms": [2, 3, 3, 4, 2, 4],
-        "Age": [5, 8, 12, 3, 20, 6],
-        "Price": [55, 78, 62, 105, 40, 96],
+        "Area": [10, 15, 12, 20],
+        "Bedrooms": [2, 3, 3, 4],
+        "Age": [5, 8, 12, 3],
+        "Price": [55, 78, 62, 105],
     })
 
-    data_edited = st.data_editor(default_data, num_rows="dynamic", key="house_data_editor")
+    data_edited = st.data_editor(default_data, num_rows="fixed", key="house_data_editor")
 
-    if st.button("📈 Fit Regression Model via LU Decomposition (exact fractions)", type="primary"):
+    if st.button("📈 Solve for Model Coefficients via LU Decomposition (exact fractions)", type="primary"):
         df = data_edited.dropna()
-        if len(df) < 4:
-            st.error("Need at least 4 data rows to solve a 4×4 system uniquely.")
+        if len(df) != 4:
+            st.error("Need exactly 4 houses (rows) to solve a 4×4 system uniquely.")
         else:
-            n_rows = len(df)
-            X = [[1] + [int(df.iloc[i][c]) for c in ["Area", "Bedrooms", "Age"]] for i in range(n_rows)]
+            X = [[1] + [int(df.iloc[i][c]) for c in ["Area", "Bedrooms", "Age"]] for i in range(4)]
             y = [int(v) for v in df["Price"].tolist()]
 
             Xf = [[Fraction(v) for v in row] for row in X]
             yf = [Fraction(v) for v in y]
 
-            k = 4
-            A_reg = [[sum(Xf[r][i] * Xf[r][j] for r in range(n_rows)) for j in range(k)] for i in range(k)]
-            c_reg = [sum(Xf[r][i] * yf[r] for r in range(n_rows)) for i in range(k)]
-
-            st.markdown("**Design matrix X** (1's column + features):")
+            st.markdown("**Design matrix X** (1's column for intercept + the 3 features, one row per house):")
             st.dataframe(pd.DataFrame(X, columns=["Intercept", "Area", "Bedrooms", "Age"]))
 
-            st.markdown("**Normal equations built:** A = XᵀX, c = Xᵀy (exact integers/fractions)")
-            result = solve_lu_exact(A_reg, c_reg)
-            render_result(result, k, x_labels=["b0 (Intercept)", "b1 (Area)", "b2 (Bedrooms)", "b3 (Age)"])
+            st.markdown("**System to solve:** X · b = y &nbsp;→&nbsp; a plain 4×4 linear system, solved directly (no normal equations needed).")
+            result = solve_lu_exact(Xf, yf)
+            render_result(result, 4, x_labels=["b0 (Intercept)", "b1 (Area)", "b2 (Bedrooms)", "b3 (Age)"])
 
             b0, b1, b2, b3 = result["x"]
             st.markdown("### Final Model")
