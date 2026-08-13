@@ -4,7 +4,7 @@ STREAMLIT APP:  LU Decomposition Solver -- Matrix-Style Visual Layout
 Application: Data Science -> Multiple Linear Regression via Normal Equations
 ==============================================================================
 Run locally with:
-    pip install streamlit numpy pandas
+    pip install streamlit numpy pandas altair
     streamlit run app.py
 ==============================================================================
 """
@@ -254,11 +254,29 @@ stays exact) to use your own data.
             predicted = b0f + b1f * area_in + b2f * bed_in + b3f * age_in
             st.success(f"Predicted price: **{predicted:.2f}** lakh PKR")
 
-            # ---- Live chart: predicted price vs Area, bedrooms/age held at slider values ----
+            # ---- Live chart: predicted price vs Area, bedrooms/age held at slider values,
+            #      plus the 4 training houses as reference dots ----
             areas = list(range(5, 26))
             price_line = [b0f + b1f * a + b2f * bed_in + b3f * age_in for a in areas]
-            chart_df = pd.DataFrame({"Area": areas, "Predicted Price": price_line}).set_index("Area")
-            st.line_chart(chart_df, height=260)
+            line_df = pd.DataFrame({"Area": areas, "Price": price_line})
+
+            train_pts_df = df[["Area", "Price"]].copy()
+
+            current_pt_df = pd.DataFrame({"Area": [area_in], "Price": [predicted]})
+
+            import altair as alt
+
+            line_chart = alt.Chart(line_df).mark_line(color="#1D9E75").encode(
+                x=alt.X("Area", title="Area (hundred sq ft)"),
+                y=alt.Y("Price", title="Price (lakh PKR)"),
+            )
+            train_points = alt.Chart(train_pts_df).mark_circle(size=90, color="gray").encode(
+                x="Area", y="Price", tooltip=["Area", "Price"]
+            )
+            current_point = alt.Chart(current_pt_df).mark_circle(size=140, color="#EF9F27").encode(
+                x="Area", y="Price"
+            )
+            st.altair_chart(line_chart + train_points + current_point, use_container_width=True)
 
             st.caption(
                 f"Chart shows predicted price as Area varies, with Bedrooms={bed_in} and "
