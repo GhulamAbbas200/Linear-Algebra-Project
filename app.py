@@ -240,19 +240,61 @@ stays exact) to use your own data.
                 f"+ \\left({fmt(b3)}\\right)\\cdot Age"
             )
 
-            st.markdown("### Try a Prediction — drag the sliders")
-            st.caption("The predicted price and chart update live as you move any slider.")
+            st.markdown("### Try a Prediction")
+            st.caption(
+                "Enter exact values for a precise fraction-based prediction, or drag the "
+                "sliders for a live view. Submitting exact values also moves the sliders "
+                "and chart to match."
+            )
+
+            # Sliders keep their own session-state keys so the exact-value form can push
+            # values into them (must be set before the slider widgets are created below).
+            if "area_slider" not in st.session_state:
+                st.session_state.area_slider = 14
+            if "bed_slider" not in st.session_state:
+                st.session_state.bed_slider = 3
+            if "age_slider" not in st.session_state:
+                st.session_state.age_slider = 10
+
+            with st.form("exact_prediction_form"):
+                t1, t2, t3 = st.columns(3)
+                with t1:
+                    area_text = st.text_input("Area (exact, e.g. 14 or 1/2)", value=str(st.session_state.area_slider))
+                with t2:
+                    bed_text = st.text_input("Bedrooms (exact)", value=str(st.session_state.bed_slider))
+                with t3:
+                    age_text = st.text_input("Age (exact)", value=str(st.session_state.age_slider))
+                submitted = st.form_submit_button("Calculate exact prediction")
+
+            if submitted:
+                try:
+                    area_f = Fraction(area_text)
+                    bed_f = Fraction(bed_text)
+                    age_f = Fraction(age_text)
+                    exact_predicted = b0 + b1 * area_f + b2 * bed_f + b3 * age_f
+                    st.success(
+                        f"Exact predicted price: **{fmt(exact_predicted)}** lakh PKR "
+                        f"(≈ {float(exact_predicted):.2f})"
+                    )
+                    # Sync the sliders (and therefore the chart below) to match, clamped
+                    # to each slider's range since sliders only take whole numbers.
+                    st.session_state.area_slider = max(5, min(25, round(float(area_f))))
+                    st.session_state.bed_slider = max(1, min(6, round(float(bed_f))))
+                    st.session_state.age_slider = max(0, min(25, round(float(age_f))))
+                except (ValueError, ZeroDivisionError):
+                    st.error("Enter valid numbers/fractions for the prediction inputs.")
+
             p1, p2, p3 = st.columns(3)
             with p1:
-                area_in = st.slider("Area (hundred sq ft)", min_value=5, max_value=25, value=14)
+                area_in = st.slider("Area (hundred sq ft)", min_value=5, max_value=25, key="area_slider")
             with p2:
-                bed_in = st.slider("Bedrooms", min_value=1, max_value=6, value=3)
+                bed_in = st.slider("Bedrooms", min_value=1, max_value=6, key="bed_slider")
             with p3:
-                age_in = st.slider("Age (years)", min_value=0, max_value=25, value=10)
+                age_in = st.slider("Age (years)", min_value=0, max_value=25, key="age_slider")
 
             b0f, b1f, b2f, b3f = float(b0), float(b1), float(b2), float(b3)
             predicted = b0f + b1f * area_in + b2f * bed_in + b3f * age_in
-            st.success(f"Predicted price: **{predicted:.2f}** lakh PKR")
+            st.info(f"Slider-based predicted price: **{predicted:.2f}** lakh PKR")
 
             # ---- Live chart: predicted price vs Area, bedrooms/age held at slider values,
             #      plus the 4 training houses as reference dots ----
