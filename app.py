@@ -240,21 +240,31 @@ stays exact) to use your own data.
                 f"+ \\left({fmt(b3)}\\right)\\cdot Age"
             )
 
-            st.markdown("### Try a Prediction")
+            st.markdown("### Try a Prediction — drag the sliders")
+            st.caption("The predicted price and chart update live as you move any slider.")
             p1, p2, p3 = st.columns(3)
             with p1:
-                area_in = st.text_input("Area (hundred sq ft)", value="14")
+                area_in = st.slider("Area (hundred sq ft)", min_value=5, max_value=25, value=14)
             with p2:
-                bed_in = st.text_input("Bedrooms", value="3")
+                bed_in = st.slider("Bedrooms", min_value=1, max_value=6, value=3)
             with p3:
-                age_in = st.text_input("Age (years)", value="10")
+                age_in = st.slider("Age (years)", min_value=0, max_value=25, value=10)
 
-            try:
-                predicted = b0 + b1 * Fraction(area_in) + b2 * Fraction(bed_in) + b3 * Fraction(age_in)
-                st.success(f"Predicted price (exact fraction): **{fmt(predicted)}** lakh PKR "
-                           f"(≈ {float(predicted):.2f})")
-            except (ValueError, ZeroDivisionError):
-                st.error("Enter valid numbers/fractions for the prediction inputs.")
+            b0f, b1f, b2f, b3f = float(b0), float(b1), float(b2), float(b3)
+            predicted = b0f + b1f * area_in + b2f * bed_in + b3f * age_in
+            st.success(f"Predicted price: **{predicted:.2f}** lakh PKR")
+
+            # ---- Live chart: predicted price vs Area, bedrooms/age held at slider values ----
+            areas = list(range(5, 26))
+            price_line = [b0f + b1f * a + b2f * bed_in + b3f * age_in for a in areas]
+            chart_df = pd.DataFrame({"Area": areas, "Predicted Price": price_line}).set_index("Area")
+            st.line_chart(chart_df, height=260)
+
+            st.caption(
+                f"Chart shows predicted price as Area varies, with Bedrooms={bed_in} and "
+                f"Age={age_in} held fixed at the slider values. Your current Area ({area_in}) "
+                f"sits on this line at ≈{predicted:.2f} lakh PKR."
+            )
 
 st.divider()
 st.caption(
